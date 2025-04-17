@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compensation Breakdown</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #091D2F;
+      color: white;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #0f2a45;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      overflow-x: hidden;
+      box-sizing: border-box;
+      position: relative;
+    }
+    .result-container {
+      max-width: 600px;
+      margin: auto;
+      background: #00000000;
+      padding: 1rem;
+      border-radius: 10px;
+      /* box-shadow: 0 0 10px rgba(0,0,0,0.3); */
+      overflow-x: hidden;
+      box-sizing: border-box;
+      position: relative;
+    }
+    input[type="range"], input[type="text"] {
+      width: 100%;
+    }
+    input[type="number"], input[type="text"] {
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+      box-sizing: border-box;
+      background: #091D2F;
+      color: white;
+      border: 1px solid #0061a0;
+    }
+    input:invalid {
+      border-color: rgb(207, 207, 207);
+    }
+    input:invalid:focus::placeholder {
+      color: red;
+    }
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      background: #0061a0;
+      color: white;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      margin-top: 0.5rem;
+    }
+    canvas {
+      margin: 2rem 0 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+      color: white;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: left;
+    }
+    h2 {
+       text-align: left;
+       margin-bottom: 0.5rem;
+    }    
+
+    h3 {
+      margin-top: 2rem;
+    }
+    .total-row {
+      font-weight: bold;
+      background: #0a395c;
+    }
+    .legend-info {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin: 0.5rem;
+      justify-content: flex-start; 
+      text-align: left;           
+      width: 100%;     
+    }
+    .color-box {
+      width: 16px;
+      height: 16px;
+      margin-right: 0.5rem;
+    }
+    .table-card {
+      background: #0f2a45;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+    .intangible-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .intangible-box {
+      background: #0a2b4d;
+      padding: 0.75rem;
+      text-align: center;
+      border-radius: 8px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.2);
+    }
+    .intangible-box img {
+      max-width: 40px;
+      margin-bottom: 0.5rem;
+    }
+    @media (max-width: 600px) {
+      table, th, td {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="form-screen">
+    <h2>Enter Your Name</h2>
+    <input type="text" id="employeeName" placeholder="e.g. Priya Sharma" required oninvalid="this.setCustomValidity('Please fill out this field.')" oninput="this.setCustomValidity('')" />
+    <h2>Enter Your Total Reward Amount</h2>
+    <input type="range" id="mainCashSlider" min="100000" max="5000000" value="1452528" step="10000" oninput="syncNumberInput(this.value)" />
+    <input type="number" id="mainCash" value="1452528" oninput="syncSliderInput(this.value)" />
+    <button onclick="calculateBreakdown()">Submit</button>
+  </div>
+
+  <div class="result-container" id="results-screen" style="display: none;">
+    <h2 id="greetingText">Compensation Breakdown</h2>
+
+    <div class="table-card">
+      <canvas id="pieChart"></canvas>
+      <div class="legend-info" id="legendInfo"></div>
+    </div>
+
+    <div class="table-card">
+      <h3>Total Cash Compensation</h3>
+      <table id="cashTable"></table>
+    </div>
+
+    <div class="table-card">
+      <h3>Monetary Benefits</h3>
+      <table id="monetaryTable"></table>
+    </div>
+
+    <div class="table-card">
+      <h3>Non-Monetary Benefits</h3>
+      <table id="nonMonetaryTable"></table>
+    </div>
+
+    <div class="table-card">
+      <h3>Intangible Benefits</h3>
+      <div class="intangible-grid">
+        <div class="intangible-box"><img src="https://img.icons8.com/?size=100&id=Gm14jOnt49Ve&format=png&color=000000" alt="Transport"/><div>Transport</div></div>
+        <div class="intangible-box"><img src="https://img.icons8.com/?size=100&id=srs1y5jxhLjK&format=png&color=000000" alt="Day Care"/><div>Day Care Facilities</div></div>
+        <div class="intangible-box"><img src="https://img.icons8.com/?size=100&id=21743&format=png&color=000000" alt="Learning"/><div>Learning & Development</div></div>
+        <div class="intangible-box"><img src="https://img.icons8.com/?size=100&id=GCaAFRCil7ti&format=png&color=000000" alt="Gym"/><div>Gym in Office</div></div>
+        <div class="intangible-box"><img src="https://img.icons8.com/?size=100&id=23232&format=png&color=000000" alt="Referral"/><div>Employee Referral</div></div>
+        <div class="intangible-box"><img src="https://img.icons8.com/?size=100&id=79UfeEN6JkZ8&format=png&color=000000" alt="Assistance"/><div>Assistance Program</div></div>
+        <div class="intangible-box"><img src="https://img.icons8.com/?size=100&id=dfXdNmnTR3uH&format=png&color=000000" alt="Medical"/><div>Medical Facility</div></div>
+      </div>
+    </div>
+
+    <button onclick="goBack()">Back</button>
+  </div>
+
+  <script>
+    const weightings = {
+      totalCash: 0.7935,
+      monetary: 0.1810,
+      nonMonetary: 0.0253
+    };
+
+    const breakdowns = {
+      totalCash: [
+        { name: "Basic + HRA + Flex", pct: 0.7222 },
+        { name: "Retirals (PF + Gratuity)", pct: 0.1988 },
+        { name: "PGS Variable Pay Plan", pct: 0.0789 }
+      ],
+      monetary: [
+        { name: "Leave Encashment", pct: 0.1799 },
+        { name: "Employee Share Purchase Plan", pct: 0.6844 },
+        { name: "Home Connect Allowance", pct: 0.0593 },
+        { name: "One-time Office Setup Allowance", pct: 0.0761 }
+      ],
+      nonMonetary: [
+        { name: "Group Medical Insurance", pct: 0.6793 },
+        { name: "Group Term Life Insurance", pct: 0.1630 },
+        { name: "Group Personal Accident Insurance", pct: 0.0489 },
+        { name: "Staff Welfare", pct: 0.1087 }
+      ]
+    };
+
+    const colors = ["#007bff", "#28a745", "#ffc107"];
+
+    function syncNumberInput(val) {
+      document.getElementById("mainCash").value = val;
+    }
+
+    function syncSliderInput(val) {
+      document.getElementById("mainCashSlider").value = val;
+    }
+
+    function goBack() {
+      document.getElementById("results-screen").style.display = "none";
+      document.getElementById("form-screen").style.display = "block";
+    }
+
+    function calculateBreakdown() {
+      const nameInput = document.getElementById("employeeName");
+      const name = nameInput.value.trim();
+      if (!name) {
+        nameInput.focus();
+        return alert("Please enter your name.");
+      }
+
+      const mainCash = parseFloat(document.getElementById("mainCash").value);
+      if (!mainCash || mainCash <= 0) return alert("Enter valid main cash amount.");
+
+      document.getElementById("form-screen").style.display = "none";
+      document.getElementById("results-screen").style.display = "block";
+
+      document.getElementById("greetingText").innerHTML = ` Thanks, <strong>${name}</strong>!<BR>Here's your compensation breakdown.`;
+
+      const totalCash = mainCash * weightings.totalCash;
+      const monetary = mainCash * weightings.monetary;
+      const nonMonetary = mainCash * weightings.nonMonetary;
+
+      const data = [totalCash, monetary, nonMonetary];
+      const labels = ["Total Cash Compensation", "Monetary Benefits", "Non-Monetary Benefits"];
+
+      const pie = new Chart(document.getElementById("pieChart"), {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: colors,
+            borderColor: ["#B2BEB5"],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            tooltip: { enabled: false },
+            legend: { display: false },
+            datalabels: {
+              display: true,
+              formatter: (value, context) => `${Math.round((value / mainCash) * 100)}%`,
+              color: '#ffffff',
+              font: { size: 10 }
+            }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+
+      const legendInfo = document.getElementById("legendInfo");
+      legendInfo.innerHTML = labels.map((label, i) => `
+        <div class="legend-item">
+          <div class="color-box" style="background-color: ${colors[i]};"></div>
+          <div><strong>${label}:</strong> ₹${Math.round(data[i]).toLocaleString()}</div>
+        </div>
+      `).join("");
+
+      const renderTable = (baseAmount, breakdownArray, tableId) => {
+        const table = document.getElementById(tableId);
+        let total = 0;
+        table.innerHTML = `<tr><th>Name</th><th>Amount (₹)</th></tr>` +
+          breakdownArray.map(item => {
+            const amt = Math.round(item.pct * baseAmount);
+            total += amt;
+            return `<tr><td>${item.name}</td><td>${amt.toLocaleString()}</td></tr>`;
+          }).join("") +
+          `<tr class='total-row'><td>Total</td><td>${Math.round(total).toLocaleString()}</td></tr>`;
+      };
+
+      renderTable(totalCash, breakdowns.totalCash, "cashTable");
+      renderTable(monetary, breakdowns.monetary, "monetaryTable");
+      renderTable(nonMonetary, breakdowns.nonMonetary, "nonMonetaryTable");
+    }
+  </script>
+</body>
+</html>
